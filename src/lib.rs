@@ -1,5 +1,5 @@
 use log::{debug, error, info, trace, warn, Level};
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen(start)]
 pub fn start() {
