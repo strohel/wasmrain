@@ -12,3 +12,4 @@ A simple web app written in Rust compiled into WASM, thus running in browsers.
 
 - https://dev.to/dandyvica/wasm-in-rust-without-nodejs-2e0c
 - https://rustwasm.github.io/docs/wasm-bindgen/examples/without-a-bundler.html
+- https://rustwasm.github.io/docs/book/introduction.html
