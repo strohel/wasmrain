@@ -6,6 +6,16 @@
 </head>
 <body>
 
+<h2>Parameters</h2>
+<label for="landscape">Landscape:</label>
+<input id="landscape" minlength="1" size="60" value="20 18 19 16 18 14 17 12 16 10 15 8 14 6 13 4 12 2 11 0 10 0 9 0 8">
+<label for="rain">Hours of rain:</label>
+<input id="rain" type="number" size="3" value="3">
+<input id="start" type="button" value="Start">
+
+<h2>Simulation</h2>
+<canvas id="canvas"></canvas>
+
 <!-- Taken from https://rustwasm.github.io/docs/wasm-bindgen/examples/without-a-bundler.html -->
 <script type="module">
     import init from './target/wasmrain.js';
