@@ -2,18 +2,16 @@
 <html lang="en">
 <head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
-    <title>Title</title>
+    <title>WASM Rain</title>
 </head>
 <body>
 
 <!-- Taken from https://rustwasm.github.io/docs/wasm-bindgen/examples/without-a-bundler.html -->
 <script type="module">
-    import init, {greet} from './target/wasmrain.js';
+    import init from './target/wasmrain.js';
 
     async function run() {
         await init();
-
-        greet("Mateji");
     }
 
     run();

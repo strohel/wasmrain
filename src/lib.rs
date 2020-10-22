@@ -6,13 +6,13 @@ extern "C" {
     fn alert(s: &str);
 }
 
-#[wasm_bindgen]
-pub fn greet(name: &str) {
+#[wasm_bindgen(start)]
+pub fn start() {
     console_log::init_with_level(Level::Debug).expect("Logging can be initialized");
     trace!("trace");
     debug!("debug");
     info!("info");
     warn!("warn");
     error!("error");
-    alert(&format!("Hello, {}!", name));
+    alert(&format!("Hello, {}!", "Matejaku"));
 }
