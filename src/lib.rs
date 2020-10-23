@@ -4,6 +4,13 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 const BLOCK_PIXELS: f64 = 30.0;
 
+// https://www.pinterest.com/pin/103371753933791633/
+// https://www.pinterest.com/pin/295548794293211914/
+const LAND_COLOR: &str = "#eed994";
+const WATER_COLOR: &str = "#0c60ae";
+const SKY_COLOR: &str = "#edf4f4";
+const CLOUD_COLOR: &str = "#b0b8bb";
+
 #[wasm_bindgen(start)]
 pub fn start() {
     console_error_panic_hook::set_once();
@@ -29,13 +36,15 @@ fn draw_on_canvas(surface: &[f64]) {
     let context: CanvasRenderingContext2d =
         canvas.get_context("2d").unwrap().unwrap().dyn_into().expect("CanvasRenderingContext2d");
 
+    // draw "cloud" to whole canvas
+    context.set_fill_style(&CLOUD_COLOR.into());
+    context.fill_rect(0.0, 0.0, width, height);
+
+    // draw land segments
+    context.set_fill_style(&LAND_COLOR.into());
     for (i, &segment_blocks) in surface.iter().enumerate() {
+        let x_offset = i as f64 * BLOCK_PIXELS;
         let segment_height = segment_blocks * BLOCK_PIXELS;
-        context.fill_rect(
-            i as f64 * BLOCK_PIXELS,
-            height - segment_height,
-            BLOCK_PIXELS,
-            segment_height,
-        );
+        context.fill_rect(x_offset, height - segment_height, BLOCK_PIXELS, segment_height);
     }
 }
