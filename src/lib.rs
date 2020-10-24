@@ -53,8 +53,7 @@ fn simulate_world() {
 
     let rain_hours = input_element(&doc, "rain").value_as_number();
 
-    info!("Simulate world with landscape: {:?} and {} hours of rain.", landscape, rain_hours);
-    draw_on_canvas(&landscape);
+    let world = World::new(landscape, rain_hours);
 
     let start_button = input_element(&doc, "start");
     start_button.set_value("Raining...");
@@ -68,30 +67,67 @@ fn input_element(doc: &Document, id: &str) -> HtmlInputElement {
         .expect("element is html <input>")
 }
 
-fn draw_on_canvas(surface: &[f64]) {
-    let canvas: HtmlCanvasElement = document()
-        .get_element_by_id("canvas")
-        .expect("#canvas element exists")
-        .dyn_into()
-        .expect("#canvas is a HTML <canvas> element");
-    let width = surface.len() as f64 * BLOCK_PIXELS;
-    let height = surface.iter().cloned().fold(0.0, f64::max) * BLOCK_PIXELS;
-    info!("Setting canvas size (w x h) to {} x {}.", width, height);
-    canvas.set_width(width as u32);
-    canvas.set_height(height as u32);
+struct World {
+    landscape: Vec<f64>,
+    surface: Vec<f64>,
+    remaining_water_hours: f64,
+    canvas_width: f64,
+    canvas_height: f64,
+    context: CanvasRenderingContext2d,
+}
 
-    let context: CanvasRenderingContext2d =
-        canvas.get_context("2d").unwrap().unwrap().dyn_into().expect("CanvasRenderingContext2d");
+impl World {
+    fn new(landscape: Vec<f64>, rain_hours: f64) -> Self {
+        info!("Simulate world with landscape: {:?} and {} hours of rain.", landscape, rain_hours);
+        let canvas_width = landscape.len() as f64 * BLOCK_PIXELS;
+        let max_segment_height = landscape.iter().cloned().fold(0.0, f64::max);
+        let canvas_height = (max_segment_height + rain_hours).ceil() * BLOCK_PIXELS;
 
-    // draw "cloud" to whole canvas
-    context.set_fill_style(&CLOUD_COLOR.into());
-    context.fill_rect(0.0, 0.0, width, height);
+        info!("Setting canvas size (w x h) to {} x {}.", canvas_width, canvas_height);
+        let canvas: HtmlCanvasElement = document()
+            .get_element_by_id("canvas")
+            .expect("#canvas element exists")
+            .dyn_into()
+            .expect("#canvas is a HTML <canvas> element");
+        canvas.set_width(canvas_width as u32);
+        canvas.set_height(canvas_height as u32);
 
-    // draw land segments
-    context.set_fill_style(&LAND_COLOR.into());
-    for (i, &segment_blocks) in surface.iter().enumerate() {
-        let x_offset = i as f64 * BLOCK_PIXELS;
-        let segment_height = segment_blocks * BLOCK_PIXELS;
-        context.fill_rect(x_offset, height - segment_height, BLOCK_PIXELS, segment_height);
+        let context: CanvasRenderingContext2d = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into()
+            .expect("CanvasRenderingContext2d");
+
+        let world = Self {
+            surface: landscape.clone(),
+            landscape,
+            remaining_water_hours: rain_hours,
+            canvas_width,
+            canvas_height,
+            context,
+        };
+        world.draw_land_sky();
+        world
+    }
+
+    fn draw_land_sky(&self) {
+        // draw sky or cloud to whole canvas
+        let sky_color = if self.remaining_water_hours > 0.0 { CLOUD_COLOR } else { SKY_COLOR };
+        self.context.set_fill_style(&sky_color.into());
+        self.context.fill_rect(0.0, 0.0, self.canvas_width, self.canvas_height);
+
+        // draw land segments
+        self.context.set_fill_style(&LAND_COLOR.into());
+        for (i, &segment_blocks) in self.landscape.iter().enumerate() {
+            let x_offset = i as f64 * BLOCK_PIXELS;
+            let segment_height = segment_blocks * BLOCK_PIXELS;
+            self.context.fill_rect(
+                x_offset,
+                self.canvas_height - segment_height,
+                BLOCK_PIXELS,
+                segment_height,
+            );
+        }
     }
 }
