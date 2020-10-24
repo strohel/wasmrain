@@ -12,6 +12,7 @@ const WATER_COLOR: &str = "#0c60ae";
 const SKY_COLOR: &str = "#edf4f4";
 const CLOUD_COLOR: &str = "#b0b8bb";
 
+/// This method gets called automatically when the WASM module is initialized.
 #[wasm_bindgen(start)]
 pub fn initialize() {
     console_error_panic_hook::set_once();
@@ -19,6 +20,7 @@ pub fn initialize() {
 
     let start_button = document().get_element_by_id("start").expect("#start element exists");
 
+    // The .into_js_value() actually leaks the box, see its docs.
     let boxed_fn = Closure::wrap(Box::new(simulate_world) as Box<dyn Fn()>).into_js_value();
     start_button
         .add_event_listener_with_callback("click", boxed_fn.unchecked_ref())
@@ -26,14 +28,17 @@ pub fn initialize() {
     info!("WASM Rain init done.");
 }
 
-fn document() -> Document {
-    window().document().unwrap()
-}
-
+/// Convenience wrapper to get DOM Window.
 fn window() -> Window {
     web_sys::window().unwrap()
 }
 
+/// Convenience wrapper to get DOM Document.
+fn document() -> Document {
+    window().document().unwrap()
+}
+
+/// Called when user clicks on the Start button.
 fn simulate_world() {
     let doc = document();
     let landscape_string: String = input_element(&doc, "landscape").value();
@@ -61,12 +66,14 @@ fn simulate_world() {
     world.schedule_next_or_finish();
 }
 
+/// Called by simulated world when it finishes.
 fn finish_simulation() {
     let start_button = input_element(&document(), "start");
     start_button.set_value("Start");
     start_button.set_disabled(false);
 }
 
+/// Convenience wrapper to get HTML <input> element by id.
 fn input_element(doc: &Document, id: &str) -> HtmlInputElement {
     doc.get_element_by_id(id)
         .expect("element with given id exists")
@@ -74,6 +81,7 @@ fn input_element(doc: &Document, id: &str) -> HtmlInputElement {
         .expect("element is html <input>")
 }
 
+/// Description of a current state of a world we are simulating.
 struct World {
     landscape: Vec<f64>,
     surface: Vec<f64>,
@@ -84,6 +92,7 @@ struct World {
 }
 
 impl World {
+    /// Create the world. Resizes the canvas and draws landscape on it, but does not animate.
     fn new(landscape: Vec<f64>, rain_hours: f64) -> Self {
         info!("Simulate world with landscape: {:?} and {} hours of rain.", landscape, rain_hours);
         let canvas_width = landscape.len() as f64 * BLOCK_PIXELS;
