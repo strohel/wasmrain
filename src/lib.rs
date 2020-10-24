@@ -89,6 +89,7 @@ struct World {
     canvas_width: f64,
     canvas_height: f64,
     context: CanvasRenderingContext2d,
+    last_timestamp: Option<f64>,
 }
 
 impl World {
@@ -122,6 +123,7 @@ impl World {
             canvas_width,
             canvas_height,
             context,
+            last_timestamp: None,
         };
         world.draw_land_sky();
         world
@@ -181,13 +183,19 @@ impl World {
 
     /// Perform one animation step, draw it and either finish or schedule a new one
     fn step(mut self, timestamp: f64) {
-        trace!("step, timestamp: {}", timestamp);
+        let elapsed_ms = match self.last_timestamp {
+            Some(last_timestamp) => timestamp - last_timestamp,
+            None => 0.0, // this should happen only for the very first iteration
+        };
+        self.last_timestamp = Some(timestamp);
+        trace!("step, elapsed_ms: {}", elapsed_ms);
 
         // compute world state (TODO)
+        let rain_hours = elapsed_ms / 1000.0; // simulation hour is real second for us
         for segment_height in self.surface.iter_mut() {
-            *segment_height += 0.1;
+            *segment_height += rain_hours;
         }
-        self.remaining_water_hours -= 0.01;
+        self.remaining_water_hours -= rain_hours;
 
         // draw
         if self.remaining_water_hours <= 0.0 {
