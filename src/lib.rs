@@ -189,6 +189,7 @@ impl World {
     /// Schedule the next frame or finish. Consumes the World.
     fn schedule_next_or_finish(self) {
         if self.remaining_rain_hours <= 0.0 {
+            info!("Final landscape: {:?}.", self.surface);
             finish_simulation();
             return;
         }
