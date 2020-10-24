@@ -1,4 +1,5 @@
 use log::{info, trace, Level};
+use snapwater::solve_landscape;
 use std::str::FromStr;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlInputElement, Window};
@@ -192,9 +193,7 @@ impl World {
 
         // compute world state (TODO)
         let rain_hours = elapsed_ms / 1000.0; // simulation hour is real second for us
-        for segment_height in self.surface.iter_mut() {
-            *segment_height += rain_hours;
-        }
+        self.surface = solve_landscape(self.surface, rain_hours);
         self.remaining_rain_hours -= rain_hours;
 
         // draw
