@@ -1,4 +1,4 @@
-use log::{info, Level};
+use log::{info, trace, Level};
 use std::str::FromStr;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlInputElement, Window};
@@ -21,7 +21,7 @@ pub fn initialize() {
 
     let boxed_fn = Closure::wrap(Box::new(simulate_world) as Box<dyn Fn()>).into_js_value();
     start_button
-        .add_event_listener_with_callback("click", boxed_fn.as_ref().unchecked_ref())
+        .add_event_listener_with_callback("click", boxed_fn.unchecked_ref())
         .expect("callback can be attached");
     info!("WASM Rain init done.");
 }
@@ -53,11 +53,18 @@ fn simulate_world() {
 
     let rain_hours = input_element(&doc, "rain").value_as_number();
 
-    let world = World::new(landscape, rain_hours);
-
     let start_button = input_element(&doc, "start");
     start_button.set_value("Raining...");
     start_button.set_disabled(true);
+
+    let world = World::new(landscape, rain_hours);
+    world.schedule_next_or_finish();
+}
+
+fn finish_simulation() {
+    let start_button = input_element(&document(), "start");
+    start_button.set_value("Start");
+    start_button.set_disabled(false);
 }
 
 fn input_element(doc: &Document, id: &str) -> HtmlInputElement {
@@ -119,15 +126,66 @@ impl World {
 
         // draw land segments
         self.context.set_fill_style(&LAND_COLOR.into());
-        for (i, &segment_blocks) in self.landscape.iter().enumerate() {
+        for (i, &land) in self.landscape.iter().enumerate() {
             let x_offset = i as f64 * BLOCK_PIXELS;
-            let segment_height = segment_blocks * BLOCK_PIXELS;
+            let pixel_height = land * BLOCK_PIXELS;
             self.context.fill_rect(
                 x_offset,
-                self.canvas_height - segment_height,
+                self.canvas_height - pixel_height,
                 BLOCK_PIXELS,
-                segment_height,
+                pixel_height,
             );
         }
+    }
+
+    fn draw_water(&self) {
+        self.context.set_fill_style(&WATER_COLOR.into());
+        for (i, (&land, &surface)) in self.landscape.iter().zip(&self.surface).enumerate() {
+            let pixel_height = (surface - land) * BLOCK_PIXELS;
+            if pixel_height <= 0.0 {
+                continue; // nothing to draw
+            }
+
+            let x_offset = i as f64 * BLOCK_PIXELS;
+            let pixel_surface = surface * BLOCK_PIXELS;
+            self.context.fill_rect(
+                x_offset,
+                self.canvas_height - pixel_surface,
+                BLOCK_PIXELS,
+                pixel_height,
+            );
+        }
+    }
+
+    /// Schedule the next frame or finish. Consumes the World.
+    fn schedule_next_or_finish(self) {
+        if self.remaining_water_hours <= 0.0 {
+            finish_simulation();
+            return;
+        }
+
+        let closure = Closure::once_into_js(|timestamp| self.step(timestamp));
+        window()
+            .request_animation_frame(closure.unchecked_ref())
+            .expect("request_animation_frame() works");
+    }
+
+    /// Perform one animation step, draw it and either finish or schedule a new one
+    fn step(mut self, timestamp: f64) {
+        trace!("step, timestamp: {}", timestamp);
+
+        // compute world state (TODO)
+        for segment_height in self.surface.iter_mut() {
+            *segment_height += 0.1;
+        }
+        self.remaining_water_hours -= 0.01;
+
+        // draw
+        if self.remaining_water_hours <= 0.0 {
+            self.draw_land_sky();
+        }
+        self.draw_water();
+
+        self.schedule_next_or_finish();
     }
 }
