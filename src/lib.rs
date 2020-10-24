@@ -1,9 +1,23 @@
+//! Simple rain simulation as web app written in Rust compiled into WASM, thus running in browsers.
+
+// Make writing "unsafe" in code a compilation error. We should not need unsafe at all.
+#![forbid(unsafe_code)]
+// Warn on generally recommended lints that are not enabled by default.
+#![warn(future_incompatible, rust_2018_idioms, unused, macro_use_extern_crate)]
+// Warn when we write more code than necessary.
+#![warn(unused_lifetimes, single_use_lifetimes, unreachable_pub, trivial_casts)]
+// Warn when we don't implement (derive) commonly needed traits. May be too strict.
+#![warn(missing_copy_implementations, missing_debug_implementations)]
+// Turn on some extra Clippy (Rust code linter) warnings. Run `cargo clippy`.
+#![warn(clippy::all)]
+
 use log::{info, trace, Level};
 use snapwater::solve_landscape;
 use std::str::FromStr;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlInputElement, Window};
 
+/// Number of pixels one "segment" has horizontally, also height of "one hour" of a rain.
 const BLOCK_PIXELS: f64 = 30.0;
 
 // https://www.pinterest.com/pin/103371753933791633/
@@ -21,10 +35,11 @@ pub fn initialize() {
 
     let start_button = document().get_element_by_id("start").expect("#start element exists");
 
+    let boxed_simulate: Box<dyn Fn()> = Box::new(simulate_world);
     // The .into_js_value() actually leaks the box, see its docs.
-    let boxed_fn = Closure::wrap(Box::new(simulate_world) as Box<dyn Fn()>).into_js_value();
+    let simulate_closure = Closure::wrap(boxed_simulate).into_js_value();
     start_button
-        .add_event_listener_with_callback("click", boxed_fn.unchecked_ref())
+        .add_event_listener_with_callback("click", simulate_closure.unchecked_ref())
         .expect("callback can be attached");
     info!("WASM Rain init done.");
 }
@@ -130,6 +145,7 @@ impl World {
         world
     }
 
+    /// Draw land and sky/cloud on the canvas. Erases all previous canvas contents.
     fn draw_land_sky(&self) {
         // draw sky or cloud to whole canvas
         let sky_color = if self.remaining_rain_hours > 0.0 { CLOUD_COLOR } else { SKY_COLOR };
@@ -150,6 +166,7 @@ impl World {
         }
     }
 
+    /// Draw water levels on the canvas. Expects that landscape is already drawn.
     fn draw_water(&self) {
         self.context.set_fill_style(&WATER_COLOR.into());
         for (i, (&land, &surface)) in self.landscape.iter().zip(&self.surface).enumerate() {
@@ -191,13 +208,15 @@ impl World {
         self.last_timestamp = Some(timestamp);
         trace!("step, elapsed_ms: {}", elapsed_ms);
 
-        // compute world state (TODO)
-        let rain_hours = elapsed_ms / 1000.0; // simulation hour is real second for us
+        // Advance world state. One simulation hour is one real second for us.
+        let rain_hours = elapsed_ms / 1000.0;
+        // fn solve_landscape(landscape: impl IntoIterator<Item = f64>, rain_hours: f64) -> Vec<f64>
         self.surface = solve_landscape(self.surface, rain_hours);
         self.remaining_rain_hours -= rain_hours;
 
-        // draw
+        // Draw.
         if self.remaining_rain_hours <= 0.0 {
+            // Switch from cloudy sky to clear sky.
             self.draw_land_sky();
         }
         self.draw_water();
