@@ -85,7 +85,7 @@ fn input_element(doc: &Document, id: &str) -> HtmlInputElement {
 struct World {
     landscape: Vec<f64>,
     surface: Vec<f64>,
-    remaining_water_hours: f64,
+    remaining_rain_hours: f64,
     canvas_width: f64,
     canvas_height: f64,
     context: CanvasRenderingContext2d,
@@ -119,7 +119,7 @@ impl World {
         let world = Self {
             surface: landscape.clone(),
             landscape,
-            remaining_water_hours: rain_hours,
+            remaining_rain_hours: rain_hours,
             canvas_width,
             canvas_height,
             context,
@@ -131,7 +131,7 @@ impl World {
 
     fn draw_land_sky(&self) {
         // draw sky or cloud to whole canvas
-        let sky_color = if self.remaining_water_hours > 0.0 { CLOUD_COLOR } else { SKY_COLOR };
+        let sky_color = if self.remaining_rain_hours > 0.0 { CLOUD_COLOR } else { SKY_COLOR };
         self.context.set_fill_style(&sky_color.into());
         self.context.fill_rect(0.0, 0.0, self.canvas_width, self.canvas_height);
 
@@ -170,7 +170,7 @@ impl World {
 
     /// Schedule the next frame or finish. Consumes the World.
     fn schedule_next_or_finish(self) {
-        if self.remaining_water_hours <= 0.0 {
+        if self.remaining_rain_hours <= 0.0 {
             finish_simulation();
             return;
         }
@@ -195,10 +195,10 @@ impl World {
         for segment_height in self.surface.iter_mut() {
             *segment_height += rain_hours;
         }
-        self.remaining_water_hours -= rain_hours;
+        self.remaining_rain_hours -= rain_hours;
 
         // draw
-        if self.remaining_water_hours <= 0.0 {
+        if self.remaining_rain_hours <= 0.0 {
             self.draw_land_sky();
         }
         self.draw_water();
